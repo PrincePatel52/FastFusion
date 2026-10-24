@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sports Performance Tracker</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{
+  --bg:#050a18; --panel:#0a1226; --panel2:#0d1730; --line:#1a2849; --txt:#e8eefc; --mut:#8fa0c4;
+  --blue:#3b82f6; --green:#22c55e; --orange:#f97316; --purple:#8b5cf6; --red:#ef4444; --amber:#f59e0b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:Inter,Segoe UI,system-ui,sans-serif;font-size:13px;min-height:100vh;
+  background-image:radial-gradient(1200px 500px at 70% -10%,#0f2350 0%,transparent 60%)}
+.app{display:grid;grid-template-columns:200px 1fr;grid-template-rows:56px 1fr 28px;min-height:100vh}
+/* top bar */
+.top{grid-column:1/3;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--line);background:#070d1f;gap:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#2563eb,#22d3ee);display:grid;place-items:center;font-size:18px}
+.brand b{font-size:15px;letter-spacing:.5px;line-height:1}
+.brand small{display:block;color:var(--mut);font-size:9px;margin-top:2px}
+.live-pill{display:flex;gap:14px;align-items:center;background:#0c1c2e;border:1px solid #1d4d3a;padding:6px 18px;border-radius:10px}
+.dot{width:8px;height:8px;border-radius:50%;background:#64748b;display:inline-block}
+.dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.dot.off{background:var(--red)}
+.top-r{display:flex;align-items:center;gap:16px}
+.conn-b{color:var(--mut);display:flex;align-items:center;gap:6px;background:#0c1830;border:1px solid var(--line);padding:6px 12px;border-radius:8px}
+/* sidebar */
+.side{padding:14px 12px;border-right:1px solid var(--line);background:#070d1f;display:flex;flex-direction:column;gap:6px}
+.nav a{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:9px;color:#b8c5e4;cursor:pointer;margin-bottom:3px;user-select:none}
+.nav a:hover{background:#0f1c3a}
+.nav a.active{background:linear-gradient(90deg,#2563eb,#1d4ed8);color:#fff}
+.side h5{color:var(--mut);font-weight:600;margin:14px 4px 4px;font-size:11px}
+.side label{color:var(--mut);font-size:11px;margin:4px 4px 2px;display:block}
+select,input{width:100%;background:#0c1830;border:1px solid var(--line);color:var(--txt);padding:8px 10px;border-radius:8px;font-size:12px}
+.btn{border:0;border-radius:8px;padding:10px;font-weight:600;cursor:pointer;color:#fff;font-size:12px;width:100%}
+.btn.conn{background:#2563eb}.btn.disc{background:var(--red)}.btn.ghost{background:transparent;border:1px solid var(--line)}
+.btn.demo{background:#0f1c3a;border:1px solid var(--line);color:#b8c5e4}
+.sens div{display:flex;gap:8px;align-items:center;padding:4px;color:#c7d2ee;font-size:12px}
+.ok{color:var(--green)} .bad{color:var(--red)} .wait{color:var(--mut)}
+.promo{margin-top:auto;border-radius:12px;padding:14px;background:linear-gradient(160deg,#0b2a66,#06122e);border:1px solid var(--line);font-size:13px}
+.promo b{display:block;font-size:15px;margin-bottom:4px}
+.ver{color:var(--mut);font-size:10px;margin-top:8px}
+/* main */
+main{padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.row{display:grid;gap:12px}
+.r-hero{grid-template-columns:1fr 190px}
+.r-cards{grid-template-columns:repeat(4,1fr)}
+.r-mid{grid-template-columns:1fr 1.5fr 1fr}
+.r-charts{grid-template-columns:repeat(3,1fr)}
+.r-bot{grid-template-columns:1.5fr 1fr}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+.panel h3{font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.hero{position:relative;overflow:hidden;min-height:112px;background:linear-gradient(100deg,#050c20 0%,#0a1b46 55%,#7a3a1a 100%);display:flex;flex-direction:column;justify-content:center}
+.hero h1{font-size:26px;letter-spacing:1px}.hero h1 span{color:#38bdf8}
+.hero p{color:#a9d4ff;margin-top:6px;font-size:13px}
+.hero .run{position:absolute;right:130px;bottom:-6px;font-size:88px;filter:brightness(0) drop-shadow(0 0 18px #f59e0b);opacity:.9}
+.hero .mount{position:absolute;right:0;bottom:0;width:60%;height:70%;opacity:.55}
+.hero .quote{position:absolute;right:16px;top:20px;text-align:right;color:#cfe3ff;font-style:italic;font-size:12px;max-width:170px}
+.weather{display:flex;flex-direction:column;justify-content:center;gap:2px}
+.weather .big{display:flex;gap:10px;align-items:center}
+.weather .big i{font-size:30px;font-style:normal}
+.weather small{color:#60a5fa}
+.card{border-radius:14px;padding:16px;display:flex;gap:14px;align-items:flex-start;position:relative;overflow:hidden;border:1px solid}
+.card .ic{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:24px;flex:none}
+.card .lbl{font-size:12px;opacity:.9}
+.card .val{font-size:28px;font-weight:700;margin:2px 0 6px;white-space:nowrap}
+.card .val small{font-size:15px;font-weight:600}
+.card .rng{font-size:11px;opacity:.75;margin-top:4px}
+.badge{display:inline-block;padding:2px 14px;border-radius:6px;font-size:11px;font-weight:600;background:#16a34a;color:#fff}
+.badge.warn{background:#d97706}.badge.err{background:#dc2626}.badge.idle{background:#475569}
+.c-temp{background:linear-gradient(180deg,#3a1708,#1a0a05);border-color:#f97316;box-shadow:0 0 22px #f9731633}
+.c-temp .ic{background:#c2410c}
+.c-hum{background:linear-gradient(180deg,#0a2250,#06122e);border-color:#3b82f6;box-shadow:0 0 22px #3b82f633}
+.c-hum .ic{background:#2563eb}
+.c-spd{background:linear-gradient(180deg,#2a0f5c,#12082e);border-color:#8b5cf6;box-shadow:0 0 22px #8b5cf633}
+.c-spd .ic{background:#6d28d9}
+.c-loc{background:linear-gradient(180deg,#0b3a22,#06180e);border-color:#22c55e;box-shadow:0 0 22px #22c55e33}
+.c-loc .ic{background:#16a34a}
+.c-loc .val{font-size:20px;line-height:1.25;white-space:normal}
+/* sat */
+.sats{display:flex;gap:4px;margin:6px 0 12px}
+.sats i{flex:1;height:16px;border-radius:3px;background:#1a2640}
+.sats i.f{background:#34d36b}
+.chip{margin-left:auto;background:#2563eb;padding:4px 12px;border-radius:7px;font-size:11px;font-weight:600}
+.kv div{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line)}
+.kv div span:first-child{color:var(--mut)}
+#map{height:190px;border-radius:10px;overflow:hidden;background:#0b1530}
+.leaflet-container{background:#0b1530}
+.cap{position:absolute;left:10px;bottom:10px;z-index:500;background:#0a1226cc;padding:4px 9px;border-radius:6px;font-size:11px}
+.mapwrap{position:relative}
+.tag{margin-left:auto;background:#0d2b1c;color:#4ade80;border:1px solid #1d5a38;padding:3px 10px;border-radius:7px;font-size:11px;font-weight:500}
+.sig{display:flex;align-items:center;justify-content:center;gap:20px;padding-top:4px}
+.ring{position:relative;width:128px;height:128px}
+.ring svg{transform:rotate(-90deg)}
+.ring .mid{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring .mid b{font-size:20px}.ring .mid span{color:var(--mut);font-size:12px}
+.sigfoot{display:flex;justify-content:space-between;margin-top:10px;color:var(--mut);font-size:12px}
+.sigfoot b{display:block;color:var(--txt);font-size:15px;text-align:center}
+.chart-box{height:140px;position:relative}
+.cl{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;font-weight:600}
+.cl i{width:11px;height:11px;border-radius:50%;display:inline-block}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{color:var(--mut);font-weight:500;text-align:left;padding:7px 6px;background:#0c1530}
+td{padding:7px 6px;border-top:1px solid #101b38}
+.scroll{max-height:360px;overflow:auto}
+.exp .row2{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;margin:10px 0}
+.exp .btn{padding:11px}.btn.blue{background:#2563eb}
+.qs{display:grid;grid-template-columns:repeat(3,1fr);margin-top:10px;border-top:1px solid var(--line);padding-top:10px;text-align:center}
+.qs span{display:block;color:var(--mut);font-size:11px}.qs b{font-size:17px}
+.foot{grid-column:1/3;display:flex;justify-content:space-between;align-items:center;padding:0 18px;color:var(--mut);font-size:11px;border-top:1px solid var(--line);background:#070d1f}
+.set-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.set-grid label{color:var(--mut);font-size:11px;display:block;margin-bottom:4px}
+.hidden{display:none!important}
+.leaflet-control-attribution{font-size:8px}
+@media(max-width:1100px){
+  .r-cards{grid-template-columns:repeat(2,1fr)} .r-mid,.r-charts,.r-bot{grid-template-columns:1fr}.r-hero{grid-template-columns:1fr}
+}
+@media(max-width:800px){
+  .app{grid-template-columns:1fr;grid-template-rows:56px auto 1fr 28px}
+  .top,.foot{grid-column:1}
+  .side{border-right:0;border-bottom:1px solid var(--line);flex-direction:row;flex-wrap:wrap;gap:4px}
+  .promo,.side h5,.side label,.ver{display:none}
+  .live-pill{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="top">
+  <div class="brand"><div class="logo">🏃</div><div><b>SPORTS PERFORMANCE TRACKER</b><small>Train Better · Perform Better · Go Further</small></div></div>
+  <div class="live-pill"><span><span class="dot" id="liveDot"></span> <span id="liveTxt">Waiting</span></span><span id="clock">—</span></div>
+  <div class="top-r">
+    <div class="conn-b"><span class="dot" id="topDot"></span><span id="topConn">Disconnected</span></div>
+    <span style="color:var(--mut)">IoT Dashboard</span>
+  </div>
+</header>
+
+<aside class="side">
+  <nav class="nav" id="nav">
+    <a data-v="dashboard" class="active">🏠 Dashboard</a>
+    <a data-v="live">📈 Live Data</a>
+    <a data-v="graphs">📊 Graphs</a>
+    <a data-v="map">📍 Map</a>
+    <a data-v="history">🕒 Data History</a>
+    <a data-v="settings">⚙️ Settings</a>
+  </nav>
+  <h5>Connection</h5>
+  <div style="padding:0 4px;color:#c7d2ee"><span class="dot" id="sideDot"></span> <span id="sideConn">ESP32 Disconnected</span></div>
+  <label>Port</label>
+  <div id="portName" style="padding:8px 10px;background:#0c1830;border:1px solid var(--line);border-radius:8px;color:var(--mut);font-size:12px">Not selected</div>
+  <label>Baud rate</label>
+  <select id="baud"><option>115200</option><option>9600</option></select>
+  <div style="margin-top:6px"><button class="btn conn" id="btnConn">Connect ESP32</button></div>
+  <button class="btn demo" id="btnDemo" style="margin-top:4px">▶ Demo Mode</button>
+  <h5>Sensor Status</h5>
+  <div class="sens">
+    <div><span id="sDht" class="wait">○</span> DHT22 (Temp &amp; Humidity)</div>
+    <div><span id="sGps" class="wait">○</span> GPS Module</div>
+    <div><span id="sLog" class="ok">✔</span> Browser Logging</div>
+  </div>
+  <div class="promo"><b>Track Your Performance</b>Reach New Heights</div>
+  <div class="ver">ESP32 + GPS + DHT22<br>IoT Sports Monitoring System</div>
+</aside>
+
+<main id="main">
+  <div class="row r-hero" data-show="dashboard">
+    <div class="panel hero">
+      <svg class="mount" viewBox="0 0 400 120" preserveAspectRatio="none"><path d="M0 120 L70 50 L120 85 L200 15 L280 90 L330 55 L400 100 L400 120Z" fill="#14264f"/></svg>
+      <h1>SPORTS <span>PERFORMANCE</span> TRACKER</h1>
+      <p>Real-time environmental &amp; GPS monitoring for better performance.</p>
+      <div class="run">🏃</div>
+      <div class="quote">"Small changes make big results"</div>
+    </div>
+    <div class="panel weather">
+      <small>Weather</small>
+      <div class="big"><i id="wIcon">☀️</i><div><b id="wTxt">—</b><div style="font-size:18px;font-weight:700" id="wTemp">—</div></div></div>
+      <div style="color:var(--mut);font-size:11px">📍 <span id="wLoc">New Delhi, India</span></div>
+    </div>
+  </div>
+
+  <div class="row r-cards" data-show="dashboard live">
+    <div class="card c-temp"><div class="ic">🌡️</div><div><div class="lbl">Temperature</div><div class="val" id="vTemp">--<small>°C</small></div><span class="badge idle" id="bTemp">No data</span><div class="rng" id="rTemp"></div></div></div>
+    <div class="card c-hum"><div class="ic">💧</div><div><div class="lbl">Humidity</div><div class="val" id="vHum">--<small>%</small></div><span class="badge idle" id="bHum">No data</span><div class="rng" id="rHum"></div></div></div>
+    <div class="card c-spd"><div class="ic">⏱️</div><div><div class="lbl">GPS Speed</div><div class="val" id="vSpd">--<small> km/h</small></div><span class="badge idle" id="bSpd">No data</span><div class="rng" id="rSpd"></div></div></div>
+    <div class="card c-loc"><div class="ic">📍</div><div><div class="lbl">GPS Location</div><div class="val" id="vLoc">-- N<br>-- E</div><span class="badge idle" id="bLoc">No fix</span></div></div>
+  </div>
+
+  <div class="row r-mid" data-show="dashboard live map">
+    <div class="panel" data-show="dashboard live">
+      <h3>🛰️ GPS Satellite Status <span class="chip" id="satChip">0 Satellites</span></h3>
+      <div class="sats" id="sats"></div>
+      <div class="kv">
+        <div><span>Latitude</span><b id="kLat">--</b></div>
+        <div><span>Longitude</span><b id="kLon">--</b></div>
+        <div><span>Altitude</span><b id="kAlt">--</b></div>
+      </div>
+    </div>
+    <div class="panel" data-show="dashboard live map">
+      <h3>🗺️ Live Location <span class="tag">● Real-time</span></h3>
+      <div class="mapwrap"><div id="map"></div><div class="cap" id="mapCap">28.6139° N, 77.2090° E</div></div>
+    </div>
+    <div class="panel" data-show="dashboard live">
+      <h3>📶 GPS Signal Quality</h3>
+      <div class="sig"><div class="ring">
+        <svg width="128" height="128" viewBox="0 0 128 128"><circle cx="64" cy="64" r="52" fill="none" stroke="#12263a" stroke-width="12"/><circle id="ringC" cx="64" cy="64" r="52" fill="none" stroke="#34d36b" stroke-width="12" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .6s;filter:drop-shadow(0 0 6px #22c55e)"/></svg>
+        <div class="mid"><b id="sigTxt">No Fix</b><span id="sigScore">0/10</span></div></div></div>
+      <div class="sigfoot"><div>HDOP<b id="kHdop">--</b></div><div>Fix Type<b id="kFix">--</b></div></div>
+    </div>
+  </div>
+
+  <div class="row r-charts" data-show="dashboard graphs">
+    <div class="panel"><div class="cl"><i style="background:var(--orange)"></i>Temperature (°C)</div><div class="chart-box"><canvas id="chT"></canvas></div></div>
+    <div class="panel"><div class="cl"><i style="background:var(--blue)"></i>Humidity (%)</div><div class="chart-box"><canvas id="chH"></canvas></div></div>
+    <div class="panel"><div class="cl"><i style="background:var(--purple)"></i>GPS Speed (km/h)</div><div class="chart-box"><canvas id="chS"></canvas></div></div>
+  </div>
+
+  <div class="row r-bot" data-show="dashboard live history">
+    <div class="panel" data-show="dashboard live history">
+      <h3>📋 <span id="feedTitle">Recent Data (Live Feed)</span></h3>
+      <div class="scroll" id="feedScroll" style="max-height:none">
+      <table><thead><tr><th>Time</th><th>Temperature</th><th>Humidity</th><th>Speed</th><th>Location</th></tr></thead><tbody id="feed"></tbody></table></div>
+    </div>
+    <div class="panel exp" data-show="dashboard history">
+      <h3>🗄️ Data &amp; Export</h3>
+      <div style="color:var(--mut);font-size:11px">Save your sensor data for analysis and training review.</div>
+      <div class="row2"><button class="btn blue" id="btnCsv">⬇ Download CSV</button><button class="btn ghost" id="btnClear">🗑 Clear Data</button></div>
+      <div style="color:var(--mut);font-size:12px;margin-bottom:4px">⚡ Quick Stats</div>
+      <div class="qs"><div><span>Total Records</span><b id="qN">0</b></div><div><span>Avg. Temperature</span><b id="qT">--</b></div><div><span>Avg. Humidity</span><b id="qH">--</b></div></div>
+    </div>
+  </div>
+
+  <div class="row" data-show="settings" style="grid-template-columns:1fr">
+    <div class="panel">
+      <h3>⚙️ Settings — Normal Range Thresholds</h3>
+      <div class="set-grid">
+        <div><label>Temp min (°C)</label><input type="number" id="tMin"></div>
+        <div><label>Temp max (°C)</label><input type="number" id="tMax"></div>
+        <div><label>Humidity min (%)</label><input type="number" id="hMin"></div>
+        <div><label>Humidity max (%)</label><input type="number" id="hMax"></div>
+        <div><label>Max speed (km/h)</label><input type="number" id="sMax"></div>
+      </div>
+      <p style="color:var(--mut);margin-top:14px;line-height:1.6">Data browser me hi save hota hai (localStorage, max 5000 records). CSV download karke Excel me khol sakte ho. Chrome ya Edge use karo (Web Serial support).</p>
+    </div>
+  </div>
+</main>
+
+<footer class="foot"><span>Sports Performance Tracker &nbsp;|&nbsp; IoT + GPS + Environmental Monitoring</span><span><span class="dot on"></span> System Online</span></footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const LS = {get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+
+/* ---------- settings ---------- */
+const th = Object.assign({tMin:20,tMax:35,hMin:30,hMax:80,sMax:100}, LS.get('spt_th',{}));
+['tMin','tMax','hMin','hMax','sMax'].forEach(k=>{
+  $(k).value = th[k];
+  $(k).onchange = ()=>{th[k]=+$(k).value;LS.set('spt_th',th);renderRanges()};
+});
+function renderRanges(){
+  $('rTemp').textContent=`(${th.tMin}°C – ${th.tMax}°C)`;
+  $('rHum').textContent=`(${th.hMin}% – ${th.hMax}%)`;
+  $('rSpd').textContent=`(0 – ${th.sMax} km/h)`;
+}
+renderRanges();
+
+/* ---------- views ---------- */
+const defaultCols = {};
+document.querySelectorAll('.row').forEach(r=>defaultCols[r.className]=1);
+function setView(v){
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.v===v));
+  document.querySelectorAll('[data-show]').forEach(el=>el.classList.toggle('hidden',!el.dataset.show.split(' ').includes(v)));
+  document.querySelectorAll('.row').forEach(r=>{
+    if(v==='dashboard'){r.style.gridTemplateColumns='';return}
+    const n=[...r.children].filter(c=>!c.classList.contains('hidden')).length||1;
+    r.style.gridTemplateColumns=`repeat(${n},1fr)`;
+  });
+  $('map').style.height = v==='map' ? '60vh' : '190px';
+  $('feedTitle').textContent = v==='history' ? 'Data History (last 300 records)' : 'Recent Data (Live Feed)';
+  $('feedScroll').style.maxHeight = v==='history' ? '65vh' : 'none';
+  renderFeed();
+  setTimeout(()=>{map.invalidateSize();[chT,chH,chS].forEach(c=>c.resize())},60);
+}
+document.querySelectorAll('#nav a').forEach(a=>a.onclick=()=>setView(a.dataset.v));
+
+/* ---------- map ---------- */
+const map = L.map('map',{zoomControl:true,attributionControl:true}).setView([28.6139,77.2090],17);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'}).addTo(map);
+const marker = L.circleMarker([28.6139,77.2090],{radius:9,color:'#ef4444',fillColor:'#ef4444',fillOpacity:.9,weight:3}).addTo(map);
+const trail = L.polyline([],{color:'#38bdf8',weight:3}).addTo(map);
+
+/* ---------- charts ---------- */
+function mkChart(id,color,min,max){
+  return new Chart($(id),{type:'line',
+    data:{labels:[],datasets:[{data:[],borderColor:color,backgroundColor:color+'33',fill:true,tension:.35,pointRadius:2,pointBackgroundColor:color,borderWidth:2}]},
+    options:{animation:false,responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#8fa0c4',maxTicksLimit:5,font:{size:10}},grid:{color:'#13203f'}},
+              y:{min,max,ticks:{color:'#8fa0c4',font:{size:10}},grid:{color:'#13203f'}}}}});
+}
+const chT=mkChart('chT','#f97316',null,null), chH=mkChart('chH','#3b82f6',null,null), chS=mkChart('chS','#8b5cf6',0,null);
+function pushChart(c,label,v){
+  const d=c.data; d.labels.push(label); d.datasets[0].data.push(v);
+  if(d.labels.length>60){d.labels.shift();d.datasets[0].data.shift()}
+  c.update('none');
+}
+
+/* ---------- sats ---------- */
+$('sats').innerHTML = '<i></i>'.repeat(10);
+
+/* ---------- data store ---------- */
+let records = LS.get('spt_records',[]);
+let lastGood = {lat:28.6139,lon:77.2090};
+const fmt2 = n => String(n).padStart(2,'0');
+const tstr = d => `${fmt2(d.getHours())}:${fmt2(d.getMinutes())}:${fmt2(d.getSeconds())}`;
+const f = (v,n=1)=> v==null||isNaN(v)?'--':(+v).toFixed(n);
+
+function status(v,min,max){ if(v==null||isNaN(v)) return ['No data','idle']; if(v<min) return ['Low','warn']; if(v>max) return ['High','err']; return ['Normal','']; }
+function setBadge(id,[t,c]){const e=$(id);e.textContent=t;e.className='badge '+c}
+
+function handle(r){
+  const now=new Date(r.ts);
+  records.push(r); if(records.length>5000) records.shift();
+  if(records.length%5===0) LS.set('spt_records',records);
+
+  // cards
+  $('vTemp').innerHTML=`${f(r.temp)}<small>°C</small>`;
+  $('vHum').innerHTML=`${f(r.hum)}<small>%</small>`;
+  $('vSpd').innerHTML=`${f(r.speed)}<small> km/h</small>`;
+  setBadge('bTemp',status(r.temp,th.tMin,th.tMax));
+  setBadge('bHum',status(r.hum,th.hMin,th.hMax));
+  setBadge('bSpd',status(r.speed,0,th.sMax));
+  if(r.fix){
+    lastGood={lat:r.lat,lon:r.lon};
+    $('vLoc').innerHTML=`${r.lat.toFixed(4)}° N<br>${r.lon.toFixed(4)}° E`;
+    setBadge('bLoc',['Active','']);
+    marker.setLatLng([r.lat,r.lon]); trail.addLatLng([r.lat,r.lon]);
+    map.panTo([r.lat,r.lon],{animate:true});
+    $('mapCap').textContent=`${r.lat.toFixed(4)}° N, ${r.lon.toFixed(4)}° E`;
+    $('kLat').textContent=r.lat.toFixed(4)+'° N'; $('kLon').textContent=r.lon.toFixed(4)+'° E';
+  }else{
+    setBadge('bLoc',['Searching…','idle']);
+    $('kLat').textContent='--'; $('kLon').textContent='--';
+  }
+  $('kAlt').textContent = r.alt!=null ? r.alt.toFixed(1)+' m' : '--';
+
+  // sats
+  const n=Math.min(10,r.sats);
+  [...$('sats').children].forEach((e,i)=>e.classList.toggle('f',i<n));
+  $('satChip').textContent=`${r.sats} Satellites`;
+
+  // signal
+  let score = r.fix ? Math.min(10,Math.max(1,r.sats)) : 0;
+  if(r.fix && r.hdop!=null){ score = r.hdop<=1?10: r.hdop<=2?8: r.hdop<=5?6: r.hdop<=10?4:2; }
+  const label = !r.fix?'No Fix': score>=7?'Good': score>=4?'Fair':'Poor';
+  const col = !r.fix?'#64748b': score>=7?'#34d36b': score>=4?'#f59e0b':'#ef4444';
+  $('sigTxt').textContent=label; $('sigScore').textContent=`${score}/10`;
+  $('ringC').style.strokeDashoffset=326.7*(1-score/10); $('ringC').style.stroke=col;
+  $('kHdop').textContent = r.hdop!=null ? r.hdop.toFixed(1) : '--';
+  $('kFix').textContent = !r.fix?'No Fix': (r.sats>=4?'3D':'2D');
+
+  // sensor status
+  setOk('sDht', !isNaN(r.temp)&&r.temp!=null);
+  setOk('sGps', r.fix, true);
+
+  // charts
+  const lab=tstr(now);
+  if(r.temp!=null&&!isNaN(r.temp)) pushChart(chT,lab,r.temp);
+  if(r.hum!=null&&!isNaN(r.hum)) pushChart(chH,lab,r.hum);
+  pushChart(chS,lab,r.speed);
+
+  renderFeed(); renderStats();
+  $('liveDot').className='dot on'; $('liveTxt').textContent='Live Data';
+}
+function setOk(id,ok,soft){const e=$(id);e.textContent=ok?'✔':(soft?'…':'✖');e.className=ok?'ok':(soft?'wait':'bad')}
+
+function rowHtml(r){
+  const loc=r.fix?`${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}`:'No fix';
+  return `<tr><td><span class="dot on" style="width:7px;height:7px;margin-right:6px"></span>${tstr(new Date(r.ts))}</td><td>${f(r.temp)}°C</td><td>${f(r.hum)}%</td><td>${f(r.speed)} km/h</td><td>${loc}</td></tr>`;
+}
+function renderFeed(){
+  const hist = document.querySelector('[data-v="history"]').classList.contains('active');
+  const list = records.slice(hist?-300:-5).reverse();
+  $('feed').innerHTML=list.map(rowHtml).join('');
+}
+function renderStats(){
+  $('qN').textContent=records.length.toLocaleString();
+  const t=records.map(r=>r.temp).filter(v=>v!=null&&!isNaN(v)), h=records.map(r=>r.hum).filter(v=>v!=null&&!isNaN(v));
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  $('qT').textContent=avg(t)!=null?avg(t).toFixed(1)+'°C':'--';
+  $('qH').textContent=avg(h)!=null?avg(h).toFixed(1)+'%':'--';
+}
+
+/* ---------- parse serial line ---------- */
+// DATA,fix,lat,lon,speed,sats,temp,hum[,alt,hdop]
+function parseLine(line){
+  if(!line.startsWith('DATA,')) return;
+  const p=line.split(',');
+  if(p.length<8) return;
+  const num=s=>{const v=parseFloat(s);return isNaN(v)?null:v};
+  handle({ts:Date.now(),fix:p[1]==='1',lat:num(p[2])||0,lon:num(p[3])||0,speed:num(p[4])||0,sats:parseInt(p[5])||0,
+          temp:num(p[6]),hum:num(p[7]),alt:p[8]!==undefined?num(p[8]):null,hdop:p[9]!==undefined?num(p[9]):null});
+}
+
+/* ---------- Web Serial ---------- */
+let port=null, reader=null, pipe=null, connected=false, demoTimer=null;
+function setConn(on){
+  connected=on;
+  const t=on?'ESP32 Connected':'ESP32 Disconnected';
+  $('topConn').textContent=t; $('sideConn').textContent=t;
+  ['topDot','sideDot'].forEach(i=>$(i).className='dot '+(on?'on':'off'));
+  $('btnConn').textContent=on?'Disconnect':'Connect ESP32';
+  $('btnConn').className='btn '+(on?'disc':'conn');
+  if(!on){$('liveDot').className='dot';$('liveTxt').textContent='Waiting'}
+}
+async function connect(){
+  if(!('serial' in navigator)){alert('Web Serial support nahi hai. Google Chrome ya Microsoft Edge (laptop/PC) me kholo.');return}
+  try{
+    stopDemo();
+    port=await navigator.serial.requestPort();
+    await port.open({baudRate:+$('baud').value});
+    const i=port.getInfo?port.getInfo():{};
+    $('portName').textContent=i.usbVendorId?`USB ${i.usbVendorId.toString(16).toUpperCase()}:${(i.usbProductId||0).toString(16).toUpperCase()}`:'Serial Port';
+    setConn(true);
+    const dec=new TextDecoderStream();
+    pipe=port.readable.pipeTo(dec.writable).catch(()=>{});
+    reader=dec.readable.getReader();
+    let buf='';
+    while(true){
+      const {value,done}=await reader.read(); if(done)break;
+      buf+=value; let i2;
+      while((i2=buf.indexOf('\n'))>=0){parseLine(buf.slice(0,i2).trim());buf=buf.slice(i2+1)}
+    }
+  }catch(e){
+    if(e.name!=='NotFoundError') alert('Connect nahi hua: '+e.message+'\n\nArduino Serial Monitor band karo aur dobara try karo.');
+  }finally{ await disconnect(); }
+}
+async function disconnect(){
+  try{ if(reader){await reader.cancel();} }catch{}
+  try{ if(pipe){await pipe;} }catch{}
+  try{ if(port){await port.close();} }catch{}
+  reader=null;pipe=null;port=null; setConn(false);
+}
+$('btnConn').onclick=()=>connected?disconnect():connect();
+
+/* ---------- demo ---------- */
+let demoT=0;
+function demoTick(){
+  demoT++;
+  handle({ts:Date.now(),fix:true,lat:28.6139+Math.sin(demoT/20)*0.0006,lon:77.2090+Math.cos(demoT/20)*0.0006,
+    speed:Math.max(0,12+Math.sin(demoT/6)*5+Math.random()),sats:8,temp:28.5+Math.sin(demoT/15)+Math.random()*.3,
+    hum:62+Math.cos(demoT/12)*2+Math.random()*.4,alt:230.5,hdop:0.8});
+}
+function stopDemo(){ if(demoTimer){clearInterval(demoTimer);demoTimer=null;$('btnDemo').textContent='▶ Demo Mode';setConn(false)} }
+$('btnDemo').onclick=()=>{
+  if(demoTimer){stopDemo();return}
+  if(connected) disconnect();
+  demoTimer=setInterval(demoTick,2000); demoTick();
+  $('btnDemo').textContent='■ Stop Demo'; $('topConn').textContent='Demo Mode'; $('sideConn').textContent='Demo Mode';
+  ['topDot','sideDot'].forEach(i=>$(i).className='dot on');
+};
+
+/* ---------- export ---------- */
+$('btnCsv').onclick=()=>{
+  if(!records.length){alert('Abhi koi data nahi hai.');return}
+  const head='Time,Fix,Latitude,Longitude,Speed_kmh,Satellites,Temperature_C,Humidity_pct\n';
+  const body=records.map(r=>[new Date(r.ts).toISOString(),r.fix?1:0,r.lat,r.lon,r.speed,r.sats,r.temp??'',r.hum??''].join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([head+body],{type:'text/csv'}));
+  a.download=`sports_tracker_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`; a.click();
+};
+$('btnClear').onclick=()=>{
+  if(!confirm('Saara saved data delete karna hai?'))return;
+  records=[];LS.set('spt_records',[]);
+  [chT,chH,chS].forEach(c=>{c.data.labels=[];c.data.datasets[0].data=[];c.update()});
+  trail.setLatLngs([]);renderFeed();renderStats();
+};
+
+/* ---------- clock + weather ---------- */
+function tick(){
+  const d=new Date();
+  $('clock').textContent=d.toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'})+'   '+d.toLocaleTimeString('en-GB');
+}
+setInterval(tick,1000);tick();
+const WX={0:['Clear Sky','☀️'],1:['Mainly Clear','🌤️'],2:['Partly Cloudy','⛅'],3:['Overcast','☁️'],45:['Fog','🌫️'],48:['Fog','🌫️'],51:['Drizzle','🌦️'],53:['Drizzle','🌦️'],55:['Drizzle','🌦️'],61:['Rain','🌧️'],63:['Rain','🌧️'],65:['Heavy Rain','🌧️'],80:['Showers','🌦️'],81:['Showers','🌦️'],82:['Heavy Showers','⛈️'],95:['Thunderstorm','⛈️'],96:['Thunderstorm','⛈️'],99:['Thunderstorm','⛈️']};
+let wxFor='';
+async function weather(force){
+  const key=lastGood.lat.toFixed(1)+','+lastGood.lon.toFixed(1);
+  if(!force&&key===wxFor)return; wxFor=key;
+  try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lastGood.lat}&longitude=${lastGood.lon}&current=temperature_2m,weather_code`);
+    const j=await r.json(); const w=WX[j.current.weather_code]||['—','🌡️'];
+    $('wTxt').textContent=w[0];$('wIcon').textContent=w[1];$('wTemp').textContent=Math.round(j.current.temperature_2m)+'°C';
+    $('wLoc').textContent=records.some(x=>x.fix)?'Your GPS location':'New Delhi, India';
+  }catch{ $('wTxt').textContent='Offline'; }
+}
+weather(true); setInterval(()=>weather(true),600000);
+setInterval(()=>weather(false),30000);
+
+/* ---------- init ---------- */
+records.slice(-60).forEach(r=>{const l=tstr(new Date(r.ts)); if(r.temp!=null)pushChart(chT,l,r.temp); if(r.hum!=null)pushChart(chH,l,r.hum); pushChart(chS,l,r.speed)});
+setView('dashboard'); renderStats(); setConn(false);
+window.addEventListener('beforeunload',()=>LS.set('spt_records',records));
+</script>
+</body>
+</html>
